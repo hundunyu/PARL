@@ -79,6 +79,7 @@ class ReplayMemory(object):
             note that some frames in state may be generated from last episode,
             they should be removed from state
             """
+        # TD-error,只需下一步即可
         state = np.zeros(
             (self.context_len + 1, ) + self.state_shape, dtype=np.uint8)
         state_idx = np.arange(idx,
