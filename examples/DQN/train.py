@@ -44,12 +44,13 @@ def run_train_episode(env, agent, rpm):
     while True:
         steps += 1
         context = rpm.recent_state()
-        context.append(state)
-        context = np.stack(context, axis=0)
+        context.append(state)  # 一个完整的context
+        context = np.stack(context, axis=0)  # 转list为array
         action = agent.sample(context)
         next_state, reward, isOver, _ = env.step(action)
         rpm.append(Experience(state, action, reward, isOver))
         # start training
+        # 大于 MEMORY_WARMUP_SIZE，开始训练
         if rpm.size() > MEMORY_WARMUP_SIZE:
             if steps % UPDATE_FREQ == 0:
                 batch_all_state, batch_action, batch_reward, batch_isOver = rpm.sample_batch(
@@ -92,11 +93,14 @@ def main():
     rpm = ReplayMemory(MEMORY_SIZE, IMAGE_SIZE, CONTEXT_LEN)
     act_dim = env.action_space.n
 
+    # model: 模型结构定义
     model = AtariModel(act_dim, args.algo)
+    # algorithm: 前向网络及反馈学习设计
     if args.algo == 'Double':
         algorithm = parl.algorithms.DDQN(model, act_dim=act_dim, gamma=GAMMA)
     elif args.algo in ['DQN', 'Dueling']:
         algorithm = parl.algorithms.DQN(model, act_dim=act_dim, gamma=GAMMA)
+    # agent: 数据交互
     agent = AtariAgent(
         algorithm,
         act_dim=act_dim,
@@ -106,11 +110,14 @@ def main():
 
     with tqdm(
             total=MEMORY_WARMUP_SIZE, desc='[Replay Memory Warm Up]') as pbar:
+        # 预热环节，先准备 MEMORY_WARMUP_SIZE 个 Experience
+        # 提供初始数据，为学习和随机采样做充足准备
         while rpm.size() < MEMORY_WARMUP_SIZE:
             total_reward, steps, _ = run_train_episode(env, agent, rpm)
             pbar.update(steps)
 
     # train
+    # 及学习策略
     test_flag = 0
     pbar = tqdm(total=args.train_total_steps)
     total_steps = 0

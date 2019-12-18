@@ -21,6 +21,16 @@ Experience = namedtuple('Experience', ['state', 'action', 'reward', 'isOver'])
 
 class ReplayMemory(object):
     def __init__(self, max_size, state_shape, context_len):
+        """
+        :param max_size:
+            内存池存放经验大小
+                Experience <S, A, R, T>
+        :param state_shape:
+            输入state尺寸
+                比如图片shape为 (84, 84)
+        :param context_len:
+        :return:
+        """
         self.max_size = int(max_size)
         self.state_shape = state_shape
         self.context_len = int(context_len)
@@ -30,8 +40,13 @@ class ReplayMemory(object):
         self.reward = np.zeros((self.max_size, ), dtype='float32')
         self.isOver = np.zeros((self.max_size, ), dtype='bool')
 
+        # 内存池当前使用数量，最大为 self.max_size
         self._curr_size = 0
+        # 当前state所在位置
         self._curr_pos = 0
+        # 固定长度的队列，存储最近的 context_len - 1 次 Experience
+        # 再加上当前的Experience，会有context_len个Experience
+        # 比如根据最近5帧图片预测下一步action
         self._context = deque(maxlen=context_len - 1)
 
     def append(self, exp):
@@ -41,7 +56,9 @@ class ReplayMemory(object):
             self._assign(self._curr_pos, exp)
             self._curr_size += 1
         else:
+            # 替换更新
             self._assign(self._curr_pos, exp)
+        # 注意：self._curr_pos是最新的位置
         self._curr_pos = (self._curr_pos + 1) % self.max_size
         if exp.isOver:
             self._context.clear()
@@ -51,6 +68,7 @@ class ReplayMemory(object):
     def recent_state(self):
         """ maintain recent state for training"""
         lst = list(self._context)
+        # 不够补零
         states = [np.zeros(self.state_shape, dtype='uint8')] * \
                     (self._context.maxlen - len(lst))
         states.extend([k.state for k in lst])

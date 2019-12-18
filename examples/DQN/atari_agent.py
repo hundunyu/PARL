@@ -64,19 +64,19 @@ class AtariAgent(parl.Agent):
                                        lr)
 
     def sample(self, obs):
-        sample = np.random.random()
+        sample = np.random.random()  # Return random floats in the half-open interval [0.0, 1.0).
         if sample < self.exploration:
             act = np.random.randint(self.act_dim)
         else:
             if np.random.random() < 0.01:
                 act = np.random.randint(self.act_dim)
             else:
-                obs = np.expand_dims(obs, axis=0)
+                obs = np.expand_dims(obs, axis=0)  # 扩增维度,即batch_size = 1
                 pred_Q = self.fluid_executor.run(
                     self.pred_program,
                     feed={'obs': obs.astype('float32')},
                     fetch_list=[self.value])[0]
-                pred_Q = np.squeeze(pred_Q, axis=0)
+                pred_Q = np.squeeze(pred_Q, axis=0)  # 比如 [[a], [b]] --> [a, b]
                 act = np.argmax(pred_Q)
         self.exploration = max(0.1, self.exploration - 1e-6)
         return act
